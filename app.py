@@ -10,20 +10,19 @@ import os
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-# --- CONFIGURACIÓN DIRECTA ---
+# --- CONFIGURACIÓN ---
 TELEGRAM_TOKEN = "8563563343:AAHwjjnrTk51on1bWbZxkYm-DfgG5MynfQ4"
 SHEET_ID = "1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ/edit?gid=261125878#gid=261125878"
+# Esta URL es correcta para que el BOT descargue el archivo:
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"
 
-# --- SERVIDOR DE SALUD (Evita el error 'Failed' en Render) ---
+# --- SERVIDOR DE SALUD (Para Render) ---
 def run_health_server():
     class Handler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"Bot Zurich Operativo")
-    
-    # Render detectó el puerto 10000 en tus logs anteriores
+            self.wfile.write(b"Bot Zurich Online")
     port = int(os.environ.get("PORT", 10000))
     socketserver.TCPServer.allow_reuse_address = True
     try:
@@ -31,7 +30,7 @@ def run_health_server():
             print(f"Servidor de salud activo en puerto {port}", flush=True)
             httpd.serve_forever()
     except Exception as e:
-        print(f"Aviso servidor web: {e}", flush=True)
+        print(f"Aviso servidor: {e}", flush=True)
 
 # --- MOTOR DE BÚSQUEDA ---
 async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,9 +38,18 @@ async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE
     print(f"Buscando siniestro: {busqueda}", flush=True)
     
     try:
-        response = requests.get(SHEET_URL, timeout=30)
+        # 1. Descargar el archivo con User-Agent para evitar bloqueos
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(SHEET_URL, headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            await update.message.reply_text("❌ Error al acceder a Google Sheets. Verifica que el archivo sea público.")
+            return
+
         excel_data = io.BytesIO(response.content)
-        dict_hojas = pd.read_excel(excel_data, sheet_name=None, header=None)
+        
+        # 2. Leer Excel con motor openpyxl
+        dict_hojas = pd.read_excel(excel_data, engine='openpyxl', sheet_name=None, header=None)
         
         for nombre_hoja, df in dict_hojas.items():
             fila_encabezado = None
@@ -94,20 +102,18 @@ async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE
                         )
                         await update.message.reply_text(res, parse_mode='Markdown')
                         return
+
         await update.message.reply_text(f"❌ No encontré el siniestro `{busqueda}`.")
     except Exception as e:
-        print(f"Error en búsqueda: {e}", flush=True)
+        print(f"Error: {e}", flush=True)
+        await update.message.reply_text(f"⚠️ Error: {str(e)[:100]}")
 
 # --- INICIO ---
 async def main():
-    # Lanzar servidor de salud
     threading.Thread(target=run_health_server, daemon=True).start()
-    
-    # Iniciar aplicación de Telegram
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, consultar_siniestro))
-    
-    print(">>> BOT ZURICH INICIADO EXITOSAMENTE", flush=True)
+    print(">>> BOT ZURICH INICIADO", flush=True)
     async with app:
         await app.initialize()
         await app.start()
