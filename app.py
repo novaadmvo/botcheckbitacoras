@@ -10,28 +10,28 @@ import os
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-# --- CONFIGURACIÓN SEGURA (Render Environment Variables) ---
-TELEGRAM_TOKEN = os.getenv("8563563343:AAHwjjnrTk51on1bWbZxkYm-DfgG5MynfQ4")
-SHEET_ID = os.getenv("1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ")
+# --- CONFIGURACIÓN DIRECTA ---
+TELEGRAM_TOKEN = "8563563343:AAHwjjnrTk51on1bWbZxkYm-DfgG5MynfQ4"
+SHEET_ID = "1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ/edit?gid=261125878#gid=261125878"
 
-# --- SERVIDOR PARA EVITAR "PORT SCAN TIMEOUT" EN RENDER ---
+# --- SERVIDOR DE SALUD (Evita el error 'Failed' en Render) ---
 def run_health_server():
     class Handler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"Bot Zurich Online")
+            self.wfile.write(b"Bot Zurich Operativo")
     
-    # Render asigna el puerto en la variable PORT automáticamente
-    port = int(os.environ.get("PORT", 8080))
+    # Render detectó el puerto 10000 en tus logs anteriores
+    port = int(os.environ.get("PORT", 10000))
     socketserver.TCPServer.allow_reuse_address = True
     try:
         with socketserver.TCPServer(("", port), Handler) as httpd:
             print(f"Servidor de salud activo en puerto {port}", flush=True)
             httpd.serve_forever()
     except Exception as e:
-        print(f"Error en servidor web: {e}", flush=True)
+        print(f"Aviso servidor web: {e}", flush=True)
 
 # --- MOTOR DE BÚSQUEDA ---
 async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,7 +68,6 @@ async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE
                                         return val if pd.notna(val) and str(val).strip() != "" else "N/A"
                             return "N/A"
 
-                        # REPORTE CON LOS 17 CAMPOS
                         res = (
                             f"✅ **SINIESTRO ENCONTRADO EN: {nombre_hoja}**\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -83,38 +82,36 @@ async def consultar_siniestro(update: Update, context: ContextTypes.DEFAULT_TYPE
                             f"🔢 **Folio Rol:** {get_val(['FOLIO ROL', 'FOLIO'])}\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"⭐ **Destacado:** {get_val(['DESTACADO'])}\n"
-                            f"💰 **Recuperación:** {get_val(['RECUPERACION', 'RECUPERACIÓN'])}\n"
+                            f"💰 **Recuperación:** {get_val(['RECUPERACION'])}\n"
                             f"🗺️ **Local/Foráneo:** {get_val(['LOCAL', 'FORANEO'])}\n"
-                            f"📍 **Ubicación:** {get_val(['UBICACION', 'UBICACIÓN'])}\n"
-                            f"🛣️ **KM:** {get_val(['KM', 'KILOMETRAJE'])}\n"
-                            f"🏗️ **Grúas:** {get_val(['GRUAS', 'GRÚAS'])}\n"
-                            f"🧾 **Facturación:** {get_val(['FACTURACION', 'FACTURACIÓN'])}\n"
+                            f"📍 **Ubicación:** {get_val(['UBICACION'])}\n"
+                            f"🛣️ **KM:** {get_val(['KM'])}\n"
+                            f"🏗️ **Grúas:** {get_val(['GRUAS'])}\n"
+                            f"🧾 **Facturación:** {get_val(['FACTURACION'])}\n"
                             f"💻 **Novalink:** {get_val(['NOVALINK', 'CARGA'])}\n"
                             f"📝 **Observaciones:** {get_val(['OBSERVACIONES', 'NOTAS'])}\n"
                             f"━━━━━━━━━━━━━━━━━━━━"
                         )
                         await update.message.reply_text(res, parse_mode='Markdown')
                         return
-
-        await update.message.reply_text(f"❌ No encontré `{busqueda}`.")
+        await update.message.reply_text(f"❌ No encontré el siniestro `{busqueda}`.")
     except Exception as e:
         print(f"Error en búsqueda: {e}", flush=True)
 
-# --- INICIO DEL PROGRAMA ---
+# --- INICIO ---
 async def main():
-    # Iniciamos el servidor de salud para que Render vea el puerto activo
+    # Lanzar servidor de salud
     threading.Thread(target=run_health_server, daemon=True).start()
     
-    # Iniciamos la aplicación de Telegram
+    # Iniciar aplicación de Telegram
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, consultar_siniestro))
     
-    print("Bot Zurich Total - Iniciado correctamente.", flush=True)
+    print(">>> BOT ZURICH INICIADO EXITOSAMENTE", flush=True)
     async with app:
         await app.initialize()
         await app.start()
         await app.updater.start_polling(drop_pending_updates=True)
-        # Bucle para mantener el proceso vivo
         while True:
             await asyncio.sleep(3600)
 
