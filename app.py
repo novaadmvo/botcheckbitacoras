@@ -11,7 +11,7 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 # --- CONFIGURACIÓN ---
-TELEGRAM_TOKEN = "8563563343:AAHwjjnrTk51on1bWbZxkYm-DfgG5MynfQ4"
+TELEGRAM_TOKEN = "8563563343:AAFTNCPEnj763xouivibHyg49F0O-qYn2hU"
 SHEET_ID = "1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ"
 # Esta URL es correcta para que el BOT descargue el archivo:
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"
@@ -126,3 +126,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         sys.exit(0)
+
