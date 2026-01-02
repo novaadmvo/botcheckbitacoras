@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 # --- CONFIGURACIÓN ---
-TELEGRAM_TOKEN = "8570476692:AAGtT92XQ9u41hlcoahUFkiqFQ8Jj8e3my4"
+TELEGRAM_TOKEN = "8563563343:AAHwjjnrTk51on1bWbZxkYm-DfgG5MynfQ4"
 SHEET_ID = "1W3fKOl_YxE7jj-F425CbDXXvHvqXvMlZ"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"
 
@@ -105,4 +105,5 @@ if __name__ == "__main__":
     print("Bot de verificacion de siniestros- Iniciado")
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, consultar_siniestro_global))
+
     app.run_polling()
